@@ -271,16 +271,16 @@
         let dragOffsetX = 0;
         let dragOffsetY = 0;
 
-        // Shoe difficulty settings
+        // Shoe difficulty settings (50% easier)
         const shoeSettings = {
             sneakers: {
-                balanceDecay: 0.3,
-                balanceThreshold: 40,
+                balanceDecay: 0.15,
+                balanceThreshold: 80,
                 stepSize: 15
             },
             heels: {
-                balanceDecay: 0.8,
-                balanceThreshold: 25,
+                balanceDecay: 0.4,
+                balanceThreshold: 50,
                 stepSize: 8
             }
         };
@@ -452,26 +452,26 @@
             // Update person's x position based on feet
             person.x = (person.leftFootX + person.rightFootX) / 2;
 
-            // Calculate balance based on foot positions
+            // Calculate balance based on foot positions (more forgiving thresholds)
             const footDistance = Math.abs(person.leftFootX - person.rightFootX);
             const footHeightDiff = Math.abs(person.leftFootY - person.rightFootY);
 
-            // Feet too far apart or at different heights causes imbalance
-            if (footDistance > 100 || footHeightDiff > 20) {
+            // Feet too far apart or at different heights causes imbalance (increased from 100 to 150)
+            if (footDistance > 150 || footHeightDiff > 30) {
                 person.balance += currentSettings.balanceDecay * 1.5;
-            } else if (footDistance < 20) {
-                // Feet too close together also causes imbalance
+            } else if (footDistance < 10) {
+                // Feet too close together also causes imbalance (reduced from 20 to 10)
                 person.balance += currentSettings.balanceDecay;
             } else {
-                // Good stance, reduce balance
-                person.balance = Math.max(0, person.balance - 0.5);
+                // Good stance, reduce balance faster
+                person.balance = Math.max(0, person.balance - 1.0);
             }
 
-            // Calculate tilt angle based on foot positions
-            person.targetAngle = (person.leftFootX - person.rightFootX) * 0.02;
+            // Calculate tilt angle based on foot positions (less sensitive)
+            person.targetAngle = (person.leftFootX - person.rightFootX) * 0.015;
 
-            // Check if fallen
-            if (Math.abs(person.targetAngle) > 0.5 || person.balance > currentSettings.balanceThreshold) {
+            // Check if fallen (increased tolerance from 0.5 to 1.0)
+            if (Math.abs(person.targetAngle) > 1.0 || person.balance > currentSettings.balanceThreshold) {
                 fall();
             }
 
@@ -495,62 +495,386 @@
 
         // Drawing functions
         function drawStreet() {
-            // Sky (already set as canvas background)
+            // Sky gradient
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, 200);
+            skyGradient.addColorStop(0, '#87CEEB');
+            skyGradient.addColorStop(1, '#B0E2FF');
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, canvas.width, 200);
 
-            // Buildings in background
-            ctx.fillStyle = '#8B8B8B';
-            for (let i = 0; i < 5; i++) {
-                const buildingX = i * 220 + 50;
-                const buildingHeight = 150 + Math.random() * 100;
-                ctx.fillRect(buildingX, 200 - buildingHeight, 180, buildingHeight);
+            // Sun
+            ctx.fillStyle = '#FFD700';
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(850, 60, 35, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
 
-                // Windows
-                ctx.fillStyle = '#FFE66D';
-                for (let row = 0; row < buildingHeight / 30; row++) {
-                    for (let col = 0; col < 4; col++) {
-                        if (Math.random() > 0.3) {
-                            ctx.fillRect(buildingX + col * 40 + 20, 200 - buildingHeight + row * 30 + 10, 20, 20);
-                        }
-                    }
-                }
-                ctx.fillStyle = '#8B8B8B';
+            // Sun rays
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 8; i++) {
+                const angle = (Math.PI * 2 / 8) * i;
+                ctx.beginPath();
+                ctx.moveTo(850 + Math.cos(angle) * 40, 60 + Math.sin(angle) * 40);
+                ctx.lineTo(850 + Math.cos(angle) * 60, 60 + Math.sin(angle) * 60);
+                ctx.stroke();
             }
 
-            // Ground/Street
-            ctx.fillStyle = '#696969';
-            ctx.fillRect(0, 480, canvas.width, 120);
+            // Clouds
+            drawCloud(150, 40, 1);
+            drawCloud(400, 70, 0.8);
+            drawCloud(700, 50, 1.2);
 
-            // Road lines
-            ctx.fillStyle = '#FFD700';
-            ctx.fillRect(0, 520, canvas.width, 4);
+            // Birds
+            drawBird(250, 90);
+            drawBird(320, 110);
+            drawBird(600, 85);
 
-            // Sidewalk
+            // Buildings in background with more details
+            const buildingColors = ['#7A7A7A', '#8B8B8B', '#696969', '#808080', '#6B6B6B'];
+            const buildingHeights = [180, 220, 160, 200, 170];
+
+            for (let i = 0; i < 5; i++) {
+                const buildingX = i * 220 + 50;
+                const buildingHeight = buildingHeights[i];
+
+                // Building shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                ctx.fillRect(buildingX + 5, 200 - buildingHeight + 5, 180, buildingHeight);
+
+                // Main building
+                ctx.fillStyle = buildingColors[i];
+                ctx.fillRect(buildingX, 200 - buildingHeight, 180, buildingHeight);
+
+                // Building roof
+                ctx.fillStyle = '#5A5A5A';
+                ctx.fillRect(buildingX - 5, 200 - buildingHeight - 10, 190, 10);
+
+                // Roof details
+                ctx.fillStyle = '#4A4A4A';
+                ctx.fillRect(buildingX + 70, 200 - buildingHeight - 20, 40, 10);
+
+                // Windows with reflections
+                for (let row = 0; row < buildingHeight / 30; row++) {
+                    for (let col = 0; col < 4; col++) {
+                        const windowX = buildingX + col * 40 + 20;
+                        const windowY = 200 - buildingHeight + row * 30 + 10;
+
+                        // Window background
+                        ctx.fillStyle = Math.random() > 0.4 ? '#FFE66D' : '#4A6FA5';
+                        ctx.fillRect(windowX, windowY, 20, 20);
+
+                        // Window frame
+                        ctx.strokeStyle = '#333333';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(windowX, windowY, 20, 20);
+
+                        // Window panes
+                        ctx.beginPath();
+                        ctx.moveTo(windowX + 10, windowY);
+                        ctx.lineTo(windowX + 10, windowY + 20);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(windowX, windowY + 10);
+                        ctx.lineTo(windowX + 20, windowY + 10);
+                        ctx.stroke();
+
+                        // Window reflection
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                        ctx.fillRect(windowX, windowY, 8, 8);
+                    }
+                }
+
+                // Building entrance (on first floor)
+                if (i % 2 === 0) {
+                    ctx.fillStyle = '#3A3A3A';
+                    ctx.fillRect(buildingX + 75, 200 - 30, 30, 30);
+                    ctx.strokeStyle = '#2A2A2A';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(buildingX + 75, 200 - 30, 30, 30);
+                }
+            }
+
+            // Grass with texture
+            const grassGradient = ctx.createLinearGradient(0, 200, 0, 470);
+            grassGradient.addColorStop(0, '#7CCD7C');
+            grassGradient.addColorStop(1, '#90EE90');
+            ctx.fillStyle = grassGradient;
+            ctx.fillRect(0, 200, canvas.width, 270);
+
+            // Grass blades detail
+            ctx.strokeStyle = 'rgba(60, 179, 113, 0.3)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 10) {
+                for (let j = 200; j < 470; j += 15) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, j);
+                    ctx.lineTo(i + Math.random() * 4 - 2, j - 5);
+                    ctx.stroke();
+                }
+            }
+
+            // Enhanced trees with more detail
+            for (let i = 100; i < canvas.width; i += 200) {
+                drawDetailedTree(i, 350);
+            }
+
+            // Flowers and bushes
+            drawFlowers(300, 440);
+            drawFlowers(650, 435);
+            drawBush(180, 430);
+            drawBush(820, 425);
+
+            // Sidewalk with texture
             ctx.fillStyle = '#A9A9A9';
             ctx.fillRect(0, 470, canvas.width, 10);
 
-            // Street stripes
+            // Sidewalk edge detail
+            ctx.strokeStyle = '#8B8B8B';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 470);
+            ctx.lineTo(canvas.width, 470);
+            ctx.stroke();
+
+            // Sidewalk tiles
+            ctx.strokeStyle = 'rgba(139, 139, 139, 0.3)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < canvas.width; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(i, 470);
+                ctx.lineTo(i, 480);
+                ctx.stroke();
+            }
+
+            // Street lamps
+            drawStreetLamp(250, 470);
+            drawStreetLamp(750, 470);
+
+            // Road with gradient
+            const roadGradient = ctx.createLinearGradient(0, 480, 0, 600);
+            roadGradient.addColorStop(0, '#5A5A5A');
+            roadGradient.addColorStop(0.5, '#696969');
+            roadGradient.addColorStop(1, '#5A5A5A');
+            ctx.fillStyle = roadGradient;
+            ctx.fillRect(0, 480, canvas.width, 120);
+
+            // Road texture
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            for (let i = 0; i < canvas.width; i += 20) {
+                for (let j = 480; j < 600; j += 20) {
+                    if (Math.random() > 0.7) {
+                        ctx.fillRect(i, j, Math.random() * 3, Math.random() * 3);
+                    }
+                }
+            }
+
+            // Road center line
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(0, 520, canvas.width, 4);
+
+            // Road edge lines
             ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 485, canvas.width, 3);
+            ctx.fillRect(0, 597, canvas.width, 3);
+
+            // Street stripes (dashed center line)
             for (let i = 0; i < canvas.width; i += 60) {
                 ctx.fillRect(i, 540, 40, 8);
             }
+        }
 
-            // Grass
-            ctx.fillStyle = '#90EE90';
-            ctx.fillRect(0, 200, canvas.width, 270);
+        function drawCloud(x, y, scale) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.beginPath();
+            ctx.arc(x, y, 20 * scale, 0, Math.PI * 2);
+            ctx.arc(x + 25 * scale, y - 5 * scale, 25 * scale, 0, Math.PI * 2);
+            ctx.arc(x + 50 * scale, y, 20 * scale, 0, Math.PI * 2);
+            ctx.arc(x + 35 * scale, y + 10 * scale, 20 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
-            // Trees
+        function drawBird(x, y) {
+            ctx.strokeStyle = '#333333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x - 8, y);
+            ctx.quadraticCurveTo(x - 4, y - 5, x, y);
+            ctx.quadraticCurveTo(x + 4, y - 5, x + 8, y);
+            ctx.stroke();
+        }
+
+        function drawDetailedTree(x, y) {
+            // Tree shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.ellipse(x + 10, y + 120, 25, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tree trunk
             ctx.fillStyle = '#8B4513';
-            for (let i = 100; i < canvas.width; i += 200) {
-                ctx.fillRect(i, 350, 20, 120);
-                ctx.fillStyle = '#228B22';
+            ctx.fillRect(x, y, 20, 120);
+
+            // Trunk texture
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 120; i += 20) {
                 ctx.beginPath();
-                ctx.arc(i + 10, 350, 40, 0, Math.PI * 2);
+                ctx.moveTo(x + 3, y + i);
+                ctx.lineTo(x + 3, y + i + 10);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(x + 15, y + i + 5);
+                ctx.lineTo(x + 15, y + i + 15);
+                ctx.stroke();
+            }
+
+            // Tree branches
+            ctx.strokeStyle = '#6B4423';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(x + 10, y + 20);
+            ctx.lineTo(x - 15, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x + 10, y + 20);
+            ctx.lineTo(x + 35, y + 5);
+            ctx.stroke();
+
+            // Tree foliage (multiple layers for depth)
+            ctx.fillStyle = '#1a5f1a';
+            ctx.beginPath();
+            ctx.arc(x + 10, y, 45, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.arc(x + 10, y - 5, 42, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#32CD32';
+            ctx.beginPath();
+            ctx.arc(x - 5, y + 5, 30, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + 25, y + 5, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Highlight on foliage
+            ctx.fillStyle = 'rgba(144, 238, 144, 0.4)';
+            ctx.beginPath();
+            ctx.arc(x + 5, y - 10, 15, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawFlowers(x, y) {
+            const flowerColors = ['#FF69B4', '#FF1493', '#FFB6C1', '#FF0080'];
+            for (let i = 0; i < 5; i++) {
+                const flowerX = x + i * 12;
+
+                // Stem
+                ctx.strokeStyle = '#228B22';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(flowerX, y);
+                ctx.lineTo(flowerX, y + 20);
+                ctx.stroke();
+
+                // Flower petals
+                ctx.fillStyle = flowerColors[Math.floor(Math.random() * flowerColors.length)];
+                for (let j = 0; j < 5; j++) {
+                    const angle = (Math.PI * 2 / 5) * j;
+                    ctx.beginPath();
+                    ctx.arc(flowerX + Math.cos(angle) * 4, y + Math.sin(angle) * 4, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Flower center
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(flowerX, y, 2, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.fillStyle = '#8B4513';
             }
         }
 
+        function drawBush(x, y) {
+            // Bush shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.ellipse(x + 20, y + 35, 25, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bush layers
+            ctx.fillStyle = '#2F4F2F';
+            ctx.beginPath();
+            ctx.arc(x, y + 20, 18, 0, Math.PI * 2);
+            ctx.arc(x + 20, y + 15, 22, 0, Math.PI * 2);
+            ctx.arc(x + 40, y + 20, 18, 0, Math.PI * 2);
+            ctx.arc(x + 20, y + 30, 20, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#3CB371';
+            ctx.beginPath();
+            ctx.arc(x + 5, y + 18, 15, 0, Math.PI * 2);
+            ctx.arc(x + 20, y + 12, 18, 0, Math.PI * 2);
+            ctx.arc(x + 35, y + 18, 15, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawStreetLamp(x, y) {
+            // Lamp post shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(x + 2, y + 2, 6, 92);
+
+            // Lamp post
+            ctx.fillStyle = '#4A4A4A';
+            ctx.fillRect(x, y, 6, 90);
+
+            // Lamp post shine
+            ctx.fillStyle = '#6A6A6A';
+            ctx.fillRect(x, y, 2, 90);
+
+            // Lamp arm
+            ctx.strokeStyle = '#4A4A4A';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(x + 3, y + 10);
+            ctx.lineTo(x + 25, y);
+            ctx.stroke();
+
+            // Lamp head
+            ctx.fillStyle = '#3A3A3A';
+            ctx.beginPath();
+            ctx.moveTo(x + 20, y - 5);
+            ctx.lineTo(x + 15, y + 10);
+            ctx.lineTo(x + 35, y + 10);
+            ctx.lineTo(x + 30, y - 5);
+            ctx.closePath();
+            ctx.fill();
+
+            // Lamp light
+            ctx.fillStyle = '#FFFACD';
+            ctx.beginPath();
+            ctx.arc(x + 25, y + 5, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Light glow
+            const lampGlow = ctx.createRadialGradient(x + 25, y + 5, 0, x + 25, y + 5, 30);
+            lampGlow.addColorStop(0, 'rgba(255, 250, 205, 0.3)');
+            lampGlow.addColorStop(1, 'rgba(255, 250, 205, 0)');
+            ctx.fillStyle = lampGlow;
+            ctx.beginPath();
+            ctx.arc(x + 25, y + 5, 30, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
         function drawPerson() {
+            // Person shadow on ground
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(person.x, person.y + 60, 30, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+
             ctx.save();
             ctx.translate(person.x, person.y);
 
@@ -558,9 +882,39 @@
             person.angle += (person.targetAngle - person.angle) * 0.1;
             ctx.rotate(person.angle);
 
-            // Body
-            ctx.fillStyle = '#FF6B6B';
+            // Body (shirt with details)
+            const shirtGradient = ctx.createLinearGradient(-person.width / 2, -person.height, person.width / 2, -person.height + 60);
+            shirtGradient.addColorStop(0, '#FF7F7F');
+            shirtGradient.addColorStop(1, '#FF6B6B');
+            ctx.fillStyle = shirtGradient;
             ctx.fillRect(-person.width / 2, -person.height, person.width, person.height * 0.6);
+
+            // Shirt collar
+            ctx.fillStyle = '#FF5555';
+            ctx.beginPath();
+            ctx.moveTo(-8, -person.height);
+            ctx.lineTo(-12, -person.height + 8);
+            ctx.lineTo(-5, -person.height + 8);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(8, -person.height);
+            ctx.lineTo(12, -person.height + 8);
+            ctx.lineTo(5, -person.height + 8);
+            ctx.closePath();
+            ctx.fill();
+
+            // Shirt buttons
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.arc(0, -person.height + 15 + i * 12, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Neck
+            ctx.fillStyle = '#FFCC99';
+            ctx.fillRect(-6, -person.height - 5, 12, 10);
 
             // Head
             ctx.fillStyle = '#FFD1A4';
@@ -568,24 +922,98 @@
             ctx.arc(0, -person.height - 15, 20, 0, Math.PI * 2);
             ctx.fill();
 
-            // Arms
+            // Ears
+            ctx.fillStyle = '#FFD1A4';
+            ctx.beginPath();
+            ctx.arc(-18, -person.height - 15, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(18, -person.height - 15, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hair
+            ctx.fillStyle = '#4A2511';
+            ctx.beginPath();
+            ctx.arc(-10, -person.height - 20, 12, 0, Math.PI * 2);
+            ctx.arc(0, -person.height - 28, 14, 0, Math.PI * 2);
+            ctx.arc(10, -person.height - 20, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Hair highlight
+            ctx.fillStyle = 'rgba(139, 90, 43, 0.4)';
+            ctx.beginPath();
+            ctx.arc(-5, -person.height - 30, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(-6, -person.height - 15, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(6, -person.height - 15, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye shine
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(-5, -person.height - 16, 1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(7, -person.height - 16, 1, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Nose
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, -person.height - 15);
+            ctx.lineTo(2, -person.height - 10);
+            ctx.stroke();
+
+            // Smile
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(0, -person.height - 10, 6, 0.2, Math.PI - 0.2);
+            ctx.stroke();
+
+            // Arms with hands
             ctx.strokeStyle = '#FF6B6B';
             ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+
+            // Left arm
             ctx.beginPath();
             ctx.moveTo(-person.width / 2, -person.height + 20);
             ctx.lineTo(-person.width / 2 - 20, -person.height + 50);
             ctx.stroke();
 
+            // Left hand
+            ctx.fillStyle = '#FFD1A4';
+            ctx.beginPath();
+            ctx.arc(-person.width / 2 - 20, -person.height + 50, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Right arm
+            ctx.strokeStyle = '#FF6B6B';
             ctx.beginPath();
             ctx.moveTo(person.width / 2, -person.height + 20);
             ctx.lineTo(person.width / 2 + 20, -person.height + 50);
             ctx.stroke();
 
-            // Legs
-            ctx.strokeStyle = '#4169E1';
-            ctx.lineWidth = 10;
+            // Right hand
+            ctx.fillStyle = '#FFD1A4';
+            ctx.beginPath();
+            ctx.arc(person.width / 2 + 20, -person.height + 50, 5, 0, Math.PI * 2);
+            ctx.fill();
 
             ctx.restore();
+
+            // Legs (pants)
+            ctx.strokeStyle = '#4169E1';
+            ctx.lineWidth = 10;
+            ctx.lineCap = 'round';
 
             // Left leg
             ctx.beginPath();
@@ -605,7 +1033,13 @@
 
         function drawFeet() {
             if (selectedShoe === 'sneakers') {
-                // Left sneaker
+                // Left sneaker shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.beginPath();
+                ctx.ellipse(person.leftFootX + 2, person.leftFootY + 3, 18, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Left sneaker base
                 ctx.fillStyle = '#FFFFFF';
                 ctx.strokeStyle = '#000000';
                 ctx.lineWidth = 2;
@@ -614,24 +1048,87 @@
                 ctx.fill();
                 ctx.stroke();
 
+                // Left sneaker sole
+                ctx.fillStyle = '#E8E8E8';
+                ctx.beginPath();
+                ctx.ellipse(person.leftFootX, person.leftFootY + 8, 18, 5, 0, 0, Math.PI);
+                ctx.fill();
+                ctx.stroke();
+
+                // Left sneaker accent
                 ctx.fillStyle = '#667eea';
                 ctx.beginPath();
                 ctx.ellipse(person.leftFootX - 5, person.leftFootY - 5, 10, 8, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Right sneaker
+                // Left sneaker laces
+                ctx.strokeStyle = '#333333';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(person.leftFootX - 8 + i * 5, person.leftFootY - 3);
+                    ctx.lineTo(person.leftFootX - 6 + i * 5, person.leftFootY);
+                    ctx.stroke();
+                }
+
+                // Left sneaker logo
+                ctx.fillStyle = '#764ba2';
+                ctx.beginPath();
+                ctx.arc(person.leftFootX + 8, person.leftFootY - 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Right sneaker shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.beginPath();
+                ctx.ellipse(person.rightFootX + 2, person.rightFootY + 3, 18, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Right sneaker base
                 ctx.fillStyle = '#FFFFFF';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.ellipse(person.rightFootX, person.rightFootY, 18, 12, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
+                // Right sneaker sole
+                ctx.fillStyle = '#E8E8E8';
+                ctx.beginPath();
+                ctx.ellipse(person.rightFootX, person.rightFootY + 8, 18, 5, 0, 0, Math.PI);
+                ctx.fill();
+                ctx.stroke();
+
+                // Right sneaker accent
                 ctx.fillStyle = '#667eea';
                 ctx.beginPath();
                 ctx.ellipse(person.rightFootX - 5, person.rightFootY - 5, 10, 8, 0, 0, Math.PI * 2);
                 ctx.fill();
+
+                // Right sneaker laces
+                ctx.strokeStyle = '#333333';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(person.rightFootX - 8 + i * 5, person.rightFootY - 3);
+                    ctx.lineTo(person.rightFootX - 6 + i * 5, person.rightFootY);
+                    ctx.stroke();
+                }
+
+                // Right sneaker logo
+                ctx.fillStyle = '#764ba2';
+                ctx.beginPath();
+                ctx.arc(person.rightFootX + 8, person.rightFootY - 2, 3, 0, Math.PI * 2);
+                ctx.fill();
+
             } else if (selectedShoe === 'heels') {
-                // Left heel
+                // Left heel shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.ellipse(person.leftFootX, person.leftFootY + 5, 15, 5, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Left heel shoe
                 ctx.fillStyle = '#f5576c';
                 ctx.strokeStyle = '#000000';
                 ctx.lineWidth = 2;
@@ -640,15 +1137,40 @@
                 ctx.fill();
                 ctx.stroke();
 
-                // Heel part
+                // Left heel shine
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.beginPath();
+                ctx.ellipse(person.leftFootX - 8, person.leftFootY - 10, 6, 4, -0.3, 0, Math.PI);
+                ctx.fill();
+
+                // Left heel strap
+                ctx.strokeStyle = '#f5576c';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(person.leftFootX - 5, person.leftFootY - 15, 8, 0, Math.PI);
+                ctx.stroke();
+
+                // Left heel buckle
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(person.leftFootX - 10, person.leftFootY - 18, 3, 3);
+
+                // Left heel stiletto
                 ctx.strokeStyle = '#8B0000';
                 ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
                 ctx.beginPath();
                 ctx.moveTo(person.leftFootX + 8, person.leftFootY - 5);
                 ctx.lineTo(person.leftFootX + 10, person.leftFootY + 8);
                 ctx.stroke();
 
-                // Right heel
+                // Right heel shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.ellipse(person.rightFootX, person.rightFootY + 5, 15, 5, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Right heel shoe
                 ctx.fillStyle = '#f5576c';
                 ctx.strokeStyle = '#000000';
                 ctx.lineWidth = 2;
@@ -657,37 +1179,88 @@
                 ctx.fill();
                 ctx.stroke();
 
-                // Heel part
+                // Right heel shine
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.beginPath();
+                ctx.ellipse(person.rightFootX - 8, person.rightFootY - 10, 6, 4, -0.3, 0, Math.PI);
+                ctx.fill();
+
+                // Right heel strap
+                ctx.strokeStyle = '#f5576c';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(person.rightFootX - 5, person.rightFootY - 15, 8, 0, Math.PI);
+                ctx.stroke();
+
+                // Right heel buckle
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(person.rightFootX - 10, person.rightFootY - 18, 3, 3);
+
+                // Right heel stiletto
                 ctx.strokeStyle = '#8B0000';
                 ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
                 ctx.beginPath();
                 ctx.moveTo(person.rightFootX + 8, person.rightFootY - 5);
                 ctx.lineTo(person.rightFootX + 10, person.rightFootY + 8);
                 ctx.stroke();
+
             } else {
-                // Barefoot
+                // Barefoot - Left foot shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.beginPath();
+                ctx.ellipse(person.leftFootX + 2, person.leftFootY + 3, 15, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Left foot
                 ctx.fillStyle = '#FFD1A4';
                 ctx.strokeStyle = '#D4A574';
                 ctx.lineWidth = 2;
-
-                // Left foot
                 ctx.beginPath();
                 ctx.ellipse(person.leftFootX, person.leftFootY, 15, 10, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
+                // Left foot toes
+                ctx.fillStyle = '#FFCC99';
+                for (let i = 0; i < 5; i++) {
+                    ctx.beginPath();
+                    ctx.arc(person.leftFootX - 12 + i * 5, person.leftFootY - 6, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Right foot shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.beginPath();
+                ctx.ellipse(person.rightFootX + 2, person.rightFootY + 3, 15, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+
                 // Right foot
+                ctx.fillStyle = '#FFD1A4';
+                ctx.strokeStyle = '#D4A574';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.ellipse(person.rightFootX, person.rightFootY, 15, 10, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
+
+                // Right foot toes
+                ctx.fillStyle = '#FFCC99';
+                for (let i = 0; i < 5; i++) {
+                    ctx.beginPath();
+                    ctx.arc(person.rightFootX - 12 + i * 5, person.rightFootY - 6, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
 
-            // Highlight dragged foot
+            // Highlight dragged foot with animation
             if (draggedFoot) {
                 ctx.strokeStyle = '#FFD700';
                 ctx.lineWidth = 3;
                 ctx.setLineDash([5, 5]);
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#FFD700';
                 ctx.beginPath();
                 if (draggedFoot === 'left') {
                     ctx.arc(person.leftFootX, person.leftFootY, 25, 0, Math.PI * 2);
@@ -696,6 +1269,7 @@
                 }
                 ctx.stroke();
                 ctx.setLineDash([]);
+                ctx.shadowBlur = 0;
             }
         }
 
@@ -738,6 +1312,14 @@
             const goalX = canvas.width - 80;
             const goalY = 380;
 
+            // Flag pole shadow
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(goalX + 2, goalY + 2);
+            ctx.lineTo(goalX + 2, goalY + 92);
+            ctx.stroke();
+
             // Flag pole
             ctx.strokeStyle = '#8B4513';
             ctx.lineWidth = 6;
@@ -746,13 +1328,41 @@
             ctx.lineTo(goalX, goalY + 90);
             ctx.stroke();
 
-            // Flag
+            // Flag pole highlight
+            ctx.strokeStyle = '#A0522D';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(goalX - 1, goalY);
+            ctx.lineTo(goalX - 1, goalY + 90);
+            ctx.stroke();
+
+            // Flag pole base
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(goalX - 8, goalY + 90, 16, 10);
+            ctx.strokeStyle = '#4A3319';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(goalX - 8, goalY + 90, 16, 10);
+
+            // Flag shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+            ctx.beginPath();
+            ctx.moveTo(goalX + 2, goalY + 2);
+            ctx.lineTo(goalX + 52, goalY + 17);
+            ctx.lineTo(goalX + 2, goalY + 32);
+            ctx.fill();
+
+            // Flag background
             ctx.fillStyle = '#4CAF50';
             ctx.beginPath();
             ctx.moveTo(goalX, goalY);
             ctx.lineTo(goalX + 50, goalY + 15);
             ctx.lineTo(goalX, goalY + 30);
             ctx.fill();
+
+            // Flag border
+            ctx.strokeStyle = '#2E7D32';
+            ctx.lineWidth = 1;
+            ctx.stroke();
 
             // Checkered pattern
             ctx.fillStyle = '#FFFFFF';
@@ -763,6 +1373,33 @@
                     }
                 }
             }
+
+            // Checkered pattern borders
+            ctx.strokeStyle = '#E0E0E0';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 3; j++) {
+                    if ((i + j) % 2 === 0) {
+                        ctx.strokeRect(goalX + j * 16.6, goalY + i * 15, 16.6, 15);
+                    }
+                }
+            }
+
+            // Flag wave effect (static)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(goalX + 10, goalY + 5);
+            ctx.quadraticCurveTo(goalX + 20, goalY + 3, goalX + 30, goalY + 5);
+            ctx.stroke();
+
+            // Goal text
+            ctx.fillStyle = '#FFD700';
+            ctx.font = 'bold 16px Arial';
+            ctx.shadowBlur = 5;
+            ctx.shadowColor = '#000000';
+            ctx.fillText('GOAL', goalX - 20, goalY - 10);
+            ctx.shadowBlur = 0;
         }
 
         function gameLoop() {
