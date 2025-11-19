@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walking Game - Choose Your Shoes!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: #87CEEB;
+            cursor: grab;
+        }
+
+        #gameCanvas:active {
+            cursor: grabbing;
+        }
+
+        #shoeSelection {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            text-align: center;
+            z-index: 10;
+        }
+
+        #shoeSelection.hidden {
+            display: none;
+        }
+
+        #shoeSelection h2 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 28px;
+        }
+
+        #shoeSelection p {
+            margin-bottom: 30px;
+            color: #666;
+            font-size: 16px;
+        }
+
+        .shoeButtons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .shoeBtn {
+            padding: 15px 30px;
+            font-size: 18px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .shoeBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        }
+
+        .shoeBtn:active {
+            transform: translateY(0);
+        }
+
+        #sneakersBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        #heelsBtn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        #instructions {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            color: #333;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            z-index: 5;
+        }
+
+        #instructions.hidden {
+            display: none;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            text-align: center;
+            z-index: 10;
+        }
+
+        #gameOver.hidden {
+            display: none;
+        }
+
+        #gameOver h2 {
+            margin-bottom: 20px;
+            color: #f5576c;
+            font-size: 32px;
+        }
+
+        #restartBtn {
+            padding: 15px 40px;
+            font-size: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        #restartBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        }
+
+        #victory {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            text-align: center;
+            z-index: 10;
+        }
+
+        #victory.hidden {
+            display: none;
+        }
+
+        #victory h2 {
+            margin-bottom: 20px;
+            color: #4CAF50;
+            font-size: 32px;
+        }
+
+        #playAgainBtn {
+            padding: 15px 40px;
+            font-size: 18px;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        #playAgainBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1000" height="600"></canvas>
+
+        <div id="shoeSelection">
+            <h2>Choose Your Shoes!</h2>
+            <p>Start your journey barefoot, but first pick your shoes wisely...</p>
+            <div class="shoeButtons">
+                <button id="sneakersBtn" class="shoeBtn">👟 Sneakers<br><small>(Easy Mode)</small></button>
+                <button id="heelsBtn" class="shoeBtn">👠 High Heels<br><small>(Hard Mode)</small></button>
+            </div>
+        </div>
+
+        <div id="instructions" class="hidden">
+            Drag the feet to walk! Keep your balance and reach the right side of the screen!
+        </div>
+
+        <div id="gameOver" class="hidden">
+            <h2>You Fell! 💫</h2>
+            <p>Better luck next time!</p>
+            <button id="restartBtn">Try Again</button>
+        </div>
+
+        <div id="victory" class="hidden">
+            <h2>You Made It! 🎉</h2>
+            <p>Congratulations on reaching the end!</p>
+            <button id="playAgainBtn">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game states
+        const STATES = {
+            SHOE_SELECTION: 'shoeSelection',
+            PLAYING: 'playing',
+            FALLEN: 'fallen',
+            VICTORY: 'victory'
+        };
+
+        // Game state
+        let gameState = STATES.SHOE_SELECTION;
+        let selectedShoe = null;
+
+        // Person object
+        const person = {
+            x: 150,
+            y: 350,
+            width: 40,
+            height: 100,
+            angle: 0,
+            targetAngle: 0,
+            leftFootX: 140,
+            leftFootY: 450,
+            rightFootX: 160,
+            rightFootY: 450,
+            balance: 0,
+            maxBalance: 100
+        };
+
+        // Drag state
+        let draggedFoot = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        // Shoe difficulty settings
+        const shoeSettings = {
+            sneakers: {
+                balanceDecay: 0.3,
+                balanceThreshold: 40,
+                stepSize: 15
+            },
+            heels: {
+                balanceDecay: 0.8,
+                balanceThreshold: 25,
+                stepSize: 8
+            }
+        };
+
+        let currentSettings = null;
+
+        // UI Elements
+        const shoeSelectionEl = document.getElementById('shoeSelection');
+        const instructionsEl = document.getElementById('instructions');
+        const gameOverEl = document.getElementById('gameOver');
+        const victoryEl = document.getElementById('victory');
+        const sneakersBtn = document.getElementById('sneakersBtn');
+        const heelsBtn = document.getElementById('heelsBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const playAgainBtn = document.getElementById('playAgainBtn');
+
+        // Event listeners for shoe selection
+        sneakersBtn.addEventListener('click', () => selectShoe('sneakers'));
+        heelsBtn.addEventListener('click', () => selectShoe('heels'));
+        restartBtn.addEventListener('click', restart);
+        playAgainBtn.addEventListener('click', restart);
+
+        function selectShoe(shoe) {
+            selectedShoe = shoe;
+            currentSettings = shoeSettings[shoe];
+            shoeSelectionEl.classList.add('hidden');
+            instructionsEl.classList.remove('hidden');
+            gameState = STATES.PLAYING;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function restart() {
+            // Reset person position
+            person.x = 150;
+            person.y = 350;
+            person.angle = 0;
+            person.targetAngle = 0;
+            person.leftFootX = 140;
+            person.leftFootY = 450;
+            person.rightFootX = 160;
+            person.rightFootY = 450;
+            person.balance = 0;
+
+            // Reset game state
+            selectedShoe = null;
+            currentSettings = null;
+            draggedFoot = null;
+
+            // Reset UI
+            gameOverEl.classList.add('hidden');
+            victoryEl.classList.add('hidden');
+            instructionsEl.classList.add('hidden');
+            shoeSelectionEl.classList.remove('hidden');
+            gameState = STATES.SHOE_SELECTION;
+        }
+
+        // Mouse events for dragging feet
+        canvas.addEventListener('mousedown', handleMouseDown);
+        canvas.addEventListener('mousemove', handleMouseMove);
+        canvas.addEventListener('mouseup', handleMouseUp);
+        canvas.addEventListener('mouseleave', handleMouseUp);
+
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', handleTouchStart);
+        canvas.addEventListener('touchmove', handleTouchMove);
+        canvas.addEventListener('touchend', handleTouchEnd);
+
+        function handleMouseDown(e) {
+            if (gameState !== STATES.PLAYING) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            checkFootGrab(mouseX, mouseY);
+        }
+
+        function handleMouseMove(e) {
+            if (gameState !== STATES.PLAYING || !draggedFoot) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            moveFoot(mouseX, mouseY);
+        }
+
+        function handleMouseUp() {
+            draggedFoot = null;
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            if (gameState !== STATES.PLAYING) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const touchX = touch.clientX - rect.left;
+            const touchY = touch.clientY - rect.top;
+
+            checkFootGrab(touchX, touchY);
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (gameState !== STATES.PLAYING || !draggedFoot) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const touchX = touch.clientX - rect.left;
+            const touchY = touch.clientY - rect.top;
+
+            moveFoot(touchX, touchY);
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            draggedFoot = null;
+        }
+
+        function checkFootGrab(x, y) {
+            const footRadius = 20;
+
+            // Check left foot
+            const distLeft = Math.sqrt(Math.pow(x - person.leftFootX, 2) + Math.pow(y - person.leftFootY, 2));
+            if (distLeft < footRadius) {
+                draggedFoot = 'left';
+                dragOffsetX = x - person.leftFootX;
+                dragOffsetY = y - person.leftFootY;
+                return;
+            }
+
+            // Check right foot
+            const distRight = Math.sqrt(Math.pow(x - person.rightFootX, 2) + Math.pow(y - person.rightFootY, 2));
+            if (distRight < footRadius) {
+                draggedFoot = 'right';
+                dragOffsetX = x - person.rightFootX;
+                dragOffsetY = y - person.rightFootY;
+                return;
+            }
+        }
+
+        function moveFoot(x, y) {
+            const newX = x - dragOffsetX;
+            const newY = Math.max(400, Math.min(470, y - dragOffsetY));
+
+            if (draggedFoot === 'left') {
+                const maxDist = 80;
+                const dist = Math.abs(newX - person.leftFootX);
+
+                if (dist <= maxDist) {
+                    person.leftFootX = newX;
+                    person.leftFootY = newY;
+                    updatePersonPosition();
+                }
+            } else if (draggedFoot === 'right') {
+                const maxDist = 80;
+                const dist = Math.abs(newX - person.rightFootX);
+
+                if (dist <= maxDist) {
+                    person.rightFootX = newX;
+                    person.rightFootY = newY;
+                    updatePersonPosition();
+                }
+            }
+        }
+
+        function updatePersonPosition() {
+            // Update person's x position based on feet
+            person.x = (person.leftFootX + person.rightFootX) / 2;
+
+            // Calculate balance based on foot positions
+            const footDistance = Math.abs(person.leftFootX - person.rightFootX);
+            const footHeightDiff = Math.abs(person.leftFootY - person.rightFootY);
+
+            // Feet too far apart or at different heights causes imbalance
+            if (footDistance > 100 || footHeightDiff > 20) {
+                person.balance += currentSettings.balanceDecay * 1.5;
+            } else if (footDistance < 20) {
+                // Feet too close together also causes imbalance
+                person.balance += currentSettings.balanceDecay;
+            } else {
+                // Good stance, reduce balance
+                person.balance = Math.max(0, person.balance - 0.5);
+            }
+
+            // Calculate tilt angle based on foot positions
+            person.targetAngle = (person.leftFootX - person.rightFootX) * 0.02;
+
+            // Check if fallen
+            if (Math.abs(person.targetAngle) > 0.5 || person.balance > currentSettings.balanceThreshold) {
+                fall();
+            }
+
+            // Check for victory
+            if (person.x > canvas.width - 100) {
+                victory();
+            }
+        }
+
+        function fall() {
+            gameState = STATES.FALLEN;
+            instructionsEl.classList.add('hidden');
+            gameOverEl.classList.remove('hidden');
+        }
+
+        function victory() {
+            gameState = STATES.VICTORY;
+            instructionsEl.classList.add('hidden');
+            victoryEl.classList.remove('hidden');
+        }
+
+        // Drawing functions
+        function drawStreet() {
+            // Sky (already set as canvas background)
+
+            // Buildings in background
+            ctx.fillStyle = '#8B8B8B';
+            for (let i = 0; i < 5; i++) {
+                const buildingX = i * 220 + 50;
+                const buildingHeight = 150 + Math.random() * 100;
+                ctx.fillRect(buildingX, 200 - buildingHeight, 180, buildingHeight);
+
+                // Windows
+                ctx.fillStyle = '#FFE66D';
+                for (let row = 0; row < buildingHeight / 30; row++) {
+                    for (let col = 0; col < 4; col++) {
+                        if (Math.random() > 0.3) {
+                            ctx.fillRect(buildingX + col * 40 + 20, 200 - buildingHeight + row * 30 + 10, 20, 20);
+                        }
+                    }
+                }
+                ctx.fillStyle = '#8B8B8B';
+            }
+
+            // Ground/Street
+            ctx.fillStyle = '#696969';
+            ctx.fillRect(0, 480, canvas.width, 120);
+
+            // Road lines
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(0, 520, canvas.width, 4);
+
+            // Sidewalk
+            ctx.fillStyle = '#A9A9A9';
+            ctx.fillRect(0, 470, canvas.width, 10);
+
+            // Street stripes
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < canvas.width; i += 60) {
+                ctx.fillRect(i, 540, 40, 8);
+            }
+
+            // Grass
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(0, 200, canvas.width, 270);
+
+            // Trees
+            ctx.fillStyle = '#8B4513';
+            for (let i = 100; i < canvas.width; i += 200) {
+                ctx.fillRect(i, 350, 20, 120);
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.arc(i + 10, 350, 40, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#8B4513';
+            }
+        }
+
+        function drawPerson() {
+            ctx.save();
+            ctx.translate(person.x, person.y);
+
+            // Smooth angle transition
+            person.angle += (person.targetAngle - person.angle) * 0.1;
+            ctx.rotate(person.angle);
+
+            // Body
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(-person.width / 2, -person.height, person.width, person.height * 0.6);
+
+            // Head
+            ctx.fillStyle = '#FFD1A4';
+            ctx.beginPath();
+            ctx.arc(0, -person.height - 15, 20, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Arms
+            ctx.strokeStyle = '#FF6B6B';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.moveTo(-person.width / 2, -person.height + 20);
+            ctx.lineTo(-person.width / 2 - 20, -person.height + 50);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(person.width / 2, -person.height + 20);
+            ctx.lineTo(person.width / 2 + 20, -person.height + 50);
+            ctx.stroke();
+
+            // Legs
+            ctx.strokeStyle = '#4169E1';
+            ctx.lineWidth = 10;
+
+            ctx.restore();
+
+            // Left leg
+            ctx.beginPath();
+            ctx.moveTo(person.x - 10, person.y - 40);
+            ctx.lineTo(person.leftFootX, person.leftFootY - 10);
+            ctx.stroke();
+
+            // Right leg
+            ctx.beginPath();
+            ctx.moveTo(person.x + 10, person.y - 40);
+            ctx.lineTo(person.rightFootX, person.rightFootY - 10);
+            ctx.stroke();
+
+            // Feet with shoes or barefoot
+            drawFeet();
+        }
+
+        function drawFeet() {
+            if (selectedShoe === 'sneakers') {
+                // Left sneaker
+                ctx.fillStyle = '#FFFFFF';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(person.leftFootX, person.leftFootY, 18, 12, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#667eea';
+                ctx.beginPath();
+                ctx.ellipse(person.leftFootX - 5, person.leftFootY - 5, 10, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Right sneaker
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.ellipse(person.rightFootX, person.rightFootY, 18, 12, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#667eea';
+                ctx.beginPath();
+                ctx.ellipse(person.rightFootX - 5, person.rightFootY - 5, 10, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (selectedShoe === 'heels') {
+                // Left heel
+                ctx.fillStyle = '#f5576c';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(person.leftFootX - 5, person.leftFootY - 8, 15, 8, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Heel part
+                ctx.strokeStyle = '#8B0000';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(person.leftFootX + 8, person.leftFootY - 5);
+                ctx.lineTo(person.leftFootX + 10, person.leftFootY + 8);
+                ctx.stroke();
+
+                // Right heel
+                ctx.fillStyle = '#f5576c';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(person.rightFootX - 5, person.rightFootY - 8, 15, 8, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Heel part
+                ctx.strokeStyle = '#8B0000';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(person.rightFootX + 8, person.rightFootY - 5);
+                ctx.lineTo(person.rightFootX + 10, person.rightFootY + 8);
+                ctx.stroke();
+            } else {
+                // Barefoot
+                ctx.fillStyle = '#FFD1A4';
+                ctx.strokeStyle = '#D4A574';
+                ctx.lineWidth = 2;
+
+                // Left foot
+                ctx.beginPath();
+                ctx.ellipse(person.leftFootX, person.leftFootY, 15, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Right foot
+                ctx.beginPath();
+                ctx.ellipse(person.rightFootX, person.rightFootY, 15, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // Highlight dragged foot
+            if (draggedFoot) {
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                if (draggedFoot === 'left') {
+                    ctx.arc(person.leftFootX, person.leftFootY, 25, 0, Math.PI * 2);
+                } else {
+                    ctx.arc(person.rightFootX, person.rightFootY, 25, 0, Math.PI * 2);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        function drawBalanceBar() {
+            const barWidth = 200;
+            const barHeight = 20;
+            const barX = canvas.width - barWidth - 20;
+            const barY = 20;
+
+            // Background
+            ctx.fillStyle = '#E0E0E0';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+
+            // Balance level
+            const balancePercent = Math.min(person.balance / currentSettings.balanceThreshold, 1);
+            const fillWidth = barWidth * balancePercent;
+
+            if (balancePercent < 0.5) {
+                ctx.fillStyle = '#4CAF50';
+            } else if (balancePercent < 0.8) {
+                ctx.fillStyle = '#FFC107';
+            } else {
+                ctx.fillStyle = '#F44336';
+            }
+            ctx.fillRect(barX, barY, fillWidth, barHeight);
+
+            // Border
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+            // Label
+            ctx.fillStyle = '#000000';
+            ctx.font = '14px Arial';
+            ctx.fillText('Balance', barX, barY - 5);
+        }
+
+        function drawGoal() {
+            // Goal flag
+            const goalX = canvas.width - 80;
+            const goalY = 380;
+
+            // Flag pole
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(goalX, goalY);
+            ctx.lineTo(goalX, goalY + 90);
+            ctx.stroke();
+
+            // Flag
+            ctx.fillStyle = '#4CAF50';
+            ctx.beginPath();
+            ctx.moveTo(goalX, goalY);
+            ctx.lineTo(goalX + 50, goalY + 15);
+            ctx.lineTo(goalX, goalY + 30);
+            ctx.fill();
+
+            // Checkered pattern
+            ctx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 3; j++) {
+                    if ((i + j) % 2 === 0) {
+                        ctx.fillRect(goalX + j * 16.6, goalY + i * 15, 16.6, 15);
+                    }
+                }
+            }
+        }
+
+        function gameLoop() {
+            if (gameState !== STATES.PLAYING) return;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw everything
+            drawStreet();
+            drawGoal();
+            drawPerson();
+            drawBalanceBar();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initial draw (just the street before game starts)
+        function initialDraw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawStreet();
+            drawGoal();
+
+            // Draw barefoot person in initial position
+            person.angle = 0;
+            person.targetAngle = 0;
+            drawPerson();
+        }
+
+        initialDraw();
+    </script>
+</body>
+</html>
